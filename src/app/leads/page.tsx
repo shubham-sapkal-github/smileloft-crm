@@ -1,17 +1,8 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { listLeads } from "@/lib/leads";
-import type { Stage } from "@/models/lead-enums";
 import DevUserSwitcher from "./dev-user-switcher";
-
-const STAGE_STYLES: Record<Stage, string> = {
-  New: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  Contacted: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  "Consult Booked": "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
-  "Treatment Planned": "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
-  Won: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  Lost: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300",
-};
+import LeadRow from "./lead-row";
 
 const CELL = "px-4 py-3 align-top";
 
@@ -77,41 +68,12 @@ export default async function LeadsPage({
                   <th className={CELL}>Stage</th>
                   <th className={CELL}>Status</th>
                   <th className={CELL}>Owner</th>
+                  <th className={CELL}>Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className={`border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50 ${
-                      lead.status === "Archived" ? "opacity-60" : ""
-                    }`}
-                  >
-                    <td className={`${CELL} font-medium`}>{lead.name}</td>
-                    <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-                      {lead.email && <div>{lead.email}</div>}
-                      {lead.phone && <div>{lead.phone}</div>}
-                    </td>
-                    <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-                      {lead.location ?? "—"}
-                    </td>
-                    <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-                      {lead.treatmentInterest ?? "—"}
-                    </td>
-                    <td className={CELL}>
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${STAGE_STYLES[lead.stage]}`}
-                      >
-                        {lead.stage}
-                      </span>
-                    </td>
-                    <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-                      {lead.status}
-                    </td>
-                    <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-                      {lead.ownerName ?? "Unassigned"}
-                    </td>
-                  </tr>
+                  <LeadRow key={lead.id} lead={lead} canAssign={user.role === "admin"} />
                 ))}
               </tbody>
             </table>

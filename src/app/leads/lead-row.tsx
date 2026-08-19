@@ -1,0 +1,145 @@
+"use client";
+
+import { useActionState } from "react";
+import { USERS } from "@/lib/users";
+import { STAGES } from "@/models/lead-enums";
+import type { LeadListItem } from "@/lib/leads";
+import { addNoteAction, assignOwnerAction, setStageAction } from "./actions";
+
+const CELL = "px-4 py-3 align-top";
+const CONTROL =
+  "rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+const BUTTON =
+  "rounded bg-zinc-900 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white";
+
+const STAGE_STYLES: Record<string, string> = {
+  New: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  Contacted: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+  "Consult Booked": "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
+  "Treatment Planned": "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
+  Won: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  Lost: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300",
+};
+
+function Error({ state }: { state: { ok: boolean; error?: string } | null }) {
+  if (!state || state.ok) return null;
+  return <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{state.error}</p>;
+}
+
+export default function LeadRow({
+  lead,
+  canAssign,
+}: {
+  lead: LeadListItem;
+  canAssign: boolean;
+}) {
+  const [stageState, stageSubmit, stagePending] = useActionState(setStageAction, null);
+  const [ownerState, ownerSubmit, ownerPending] = useActionState(assignOwnerAction, null);
+  const [noteState, noteSubmit, notePending] = useActionState(addNoteAction, null);
+
+  // React clears the form once the action resolves, so a failed note is put
+  // back from what the action returned. Remounting on change is what makes the
+  // new defaultValue take effect.
+  const rejectedNote = noteState && !noteState.ok ? (noteState.body ?? "") : "";
+
+  return (
+    <tr
+      className={`border-b border-zinc-100 last:border-0 dark:border-zinc-800 ${
+        lead.status === "Archived" ? "opacity-60" : ""
+      }`}
+    >
+      <td className={`${CELL} font-medium`}>{lead.name}</td>
+      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
+        {lead.email && <div>{lead.email}</div>}
+        {lead.phone && <div>{lead.phone}</div>}
+      </td>
+      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>{lead.location ?? "—"}</td>
+      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
+        {lead.treatmentInterest ?? "—"}
+      </td>
+
+      <td className={CELL}>
+        <span
+          className={`mb-1.5 inline-block rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${STAGE_STYLES[lead.stage]}`}
+        >
+          {lead.stage}
+        </span>
+        <form action={stageSubmit} className="flex items-center gap-1">
+          <input type="hidden" name="leadId" value={lead.id} />
+          <select name="stage" defaultValue={lead.stage} className={CONTROL} key={lead.stage}>
+            {STAGES.map((stage) => (
+              <option key={stage} value={stage}>
+                {stage}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={BUTTON} disabled={stagePending}>
+            {stagePending ? "…" : "Move"}
+          </button>
+        </form>
+        <Error state={stageState} />
+      </td>
+
+      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>{lead.status}</td>
+
+      <td className={CELL}>
+        <div className="mb-1.5 text-zinc-600 dark:text-zinc-400">
+          {lead.ownerName ?? "Unassigned"}
+        </div>
+        {/* Admin only. The server refuses an agent regardless — see actions.ts
+            and src/lib/leads.ts; hiding this is tidiness, not the control. */}
+        {canAssign && (
+          <>
+            <form action={ownerSubmit} className="flex items-center gap-1">
+              <input type="hidden" name="leadId" value={lead.id} />
+              <select
+                name="ownerId"
+                defaultValue={lead.ownerId ?? ""}
+                className={CONTROL}
+                key={lead.ownerId ?? "none"}
+              >
+                {lead.ownerId === null && <option value="">Unassigned</option>}
+                {USERS.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className={BUTTON} disabled={ownerPending}>
+                {ownerPending ? "…" : "Assign"}
+              </button>
+            </form>
+            <Error state={ownerState} />
+          </>
+        )}
+      </td>
+
+      <td className={CELL}>
+        {lead.notes.length > 0 && (
+          <ul className="mb-1.5 space-y-1">
+            {lead.notes.map((note) => (
+              <li key={note.id} className="text-xs text-zinc-600 dark:text-zinc-400">
+                {note.body}
+                <span className="text-zinc-400 dark:text-zinc-500"> — {note.authorName}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={noteSubmit} className="flex items-start gap-1">
+          <input type="hidden" name="leadId" value={lead.id} />
+          <input
+            name="body"
+            defaultValue={rejectedNote}
+            key={`${rejectedNote}-${lead.notes.length}`}
+            placeholder="Add a note"
+            className={`${CONTROL} w-40`}
+          />
+          <button type="submit" className={BUTTON} disabled={notePending}>
+            {notePending ? "…" : "Add"}
+          </button>
+        </form>
+        <Error state={noteState} />
+      </td>
+    </tr>
+  );
+}

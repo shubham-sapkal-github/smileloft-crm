@@ -94,7 +94,6 @@ async function findInScope(leadId: string, user: User) {
 }
 
 export async function setStage(leadId: string, stage: Stage): Promise<ActionResult> {
-  "use server";
   await connectToDatabase();
   const user = await getCurrentUser();
 
@@ -114,7 +113,6 @@ export async function assignOwner(
   leadId: string,
   ownerId: string,
 ): Promise<ActionResult> {
-  "use server";
   await connectToDatabase();
   const user = await getCurrentUser();
 
@@ -137,7 +135,6 @@ export async function assignOwner(
 const NOTE_MAX_LENGTH = 2000;
 
 export async function addNote(leadId: string, body: string): Promise<ActionResult> {
-  "use server";
   await connectToDatabase();
   const user = await getCurrentUser();
 

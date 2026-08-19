@@ -78,9 +78,11 @@ mount the dev switcher) and `docs/STACK.md` (to fill in the `db seed` row).
 | `src/models/Lead.ts` | Mongoose schema + model, guarded against re-registration on hot reload. `server-only`. |
 | `src/lib/users.ts` | The hardcoded `USERS` list and the `User`/`Role` types. **No `server-only`**, for the same reason as the enums: the seed script (plain Node) and the switcher dropdown (a Client Component) both need it. |
 | `src/lib/auth.ts` | `getCurrentUser()` and `setDevUser()`. `server-only`. |
-| `src/lib/leads.ts` | Data access layer: `listLeads()`, `setStage()`, `assignOwner()`, `addNote()`. Marked `import 'server-only'`. |
+| `src/lib/leads.ts` | Data access layer: `listLeads()`, `setStage()`, `assignOwner()`, `addNote()`. `server-only`, and **not** an endpoint — no `"use server"` here, so the POST-able surface stays as small as possible. |
+| `src/app/leads/actions.ts` | The `"use server"` boundary: three thin form adapters that read `FormData` and delegate to the DAL, which re-derives identity and scope for itself. |
 | `src/app/leads/page.tsx` | Server Component. Awaits `listLeads()`, renders the table, the acting user and the lead count, and the archived toggle. |
-| `src/app/leads/lead-row.tsx` | Client Component for the three row controls. |
+| `src/app/leads/lead-row.tsx` | Client Component for the three row controls, via `useActionState`. The assign control renders only for admins — tidiness, not the control. |
+| `src/app/page.tsx` | Redirects `/` to `/leads`. |
 | `src/app/leads/dev-user-switcher.tsx` | Dev-only role switcher. A **Server** Component with a plain form — no client JS needed, and `setDevUser` is passed straight to `action`. Lives in the leads header rather than the root layout, so the acting user sits next to the lead count that proves the scope is real, and it stays off unrelated pages. |
 | `scripts/seed.ts` | Seeds 12 leads across **all six stages**, both statuses and both owners, plus one unowned. Idempotent: matched on `name` and updated in place, so re-running during a demo resets rather than duplicates. Run with `npm run seed`. |
 | `src/lib/leads.test.ts` | The runnable check (see Test cases). |
@@ -211,7 +213,7 @@ reaches the enums through the server-only module by habit.
 | Lead written with a name but no email and no phone | Rejected by the model. |
 | Malformed lead id (not an ObjectId) | Same generic "Lead not found" — no cast error leaks out. |
 | Note longer than 2000 characters | Rejected. A cap has to exist somewhere; 2000 is roughly a screen of text. |
-| Note submitted but the write fails | The action returns an error and the typed text stays in the box. A failed note must not silently vanish. |
+| Note submitted but the write fails | The action returns the error **and the rejected text**, which refills the box. React clears an uncontrolled form once the action resolves, so the text has to be handed back deliberately or a failed note vanishes. |
 | Two people change the stage of one lead at once | Last write wins. Acceptable at practice scale; no locking. |
 | Lead has no owner | Visible to admins only, since no agent owns it. Seed includes one. |
 | Archived leads | Hidden by default; shown via the toggle, visually muted, still fully actionable. |
@@ -298,6 +300,7 @@ Any of them can be reopened cheaply.
 | 2026-08-19 | Plan written | Claude |
 | 2026-08-19 | Agent reassignment restricted to admins; location confirmed as patient town; no create form; questions 2, 3, 5, 6 decided by default | Claude |
 | 2026-08-19 | **Plan approved** | shubham |
+| 2026-08-19 | Subtask 7 built: row actions, admin-only assign control, `/` redirects to `/leads`. Bypass verified by replaying a captured browser request as an agent | Claude |
 | 2026-08-19 | Subtask 6 built, plus subtask 8 pulled forward (the switcher is needed to see both roles). Rung 4 closed in a real browser | Claude |
 | 2026-08-19 | Subtask 5 built: idempotent seed across all six stages; `USERS` split into `src/lib/users.ts`; added `tsx` to run scripts | Claude |
 | 2026-08-19 | Subtask 4 built: `scopeFor`, `listLeads`, three mutations, permission-before-payload ordering. Verified by deleting each rule | Claude |
