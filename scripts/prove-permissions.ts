@@ -20,7 +20,11 @@ const AGENT = USERS.find((u) => u.role === "agent")!;
 
 /** Server action ids change every build, so read the live one off the server. */
 async function findActionId(name: string): Promise<string> {
-  const html = await (await fetch(`${BASE}/leads`)).text();
+  // /leads redirects to /signin when no demo user has been chosen, so the
+  // discovery fetch carries a cookie like the POSTs below. Plumbing only —
+  // what this script proves is unchanged.
+  const page = await fetch(`${BASE}/leads`, { headers: { Cookie: `dev-user=${ADMIN.id}` } });
+  const html = await page.text();
   const chunks = [...new Set(html.match(/\/_next\/static\/[^"]+\.js/g) ?? [])];
   for (const chunk of chunks) {
     const js = await (await fetch(`${BASE}${chunk}`)).text();

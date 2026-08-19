@@ -8,6 +8,7 @@ export default function Funnel({ data }: { data: FunnelData }) {
 
   return (
     <section
+      id="funnel"
       aria-label="Pipeline funnel"
       className="mb-6 grid gap-6 rounded-lg border border-zinc-200 bg-white p-5 md:grid-cols-[1fr_auto] dark:border-zinc-800 dark:bg-zinc-900"
     >

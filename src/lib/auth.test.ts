@@ -11,11 +11,15 @@ vi.mock("next/headers", () => ({
     get: (name: string) =>
       cookieJar.has(name) ? { name, value: cookieJar.get(name) } : undefined,
     set: setCookie,
+    delete: (name: string) => cookieJar.delete(name),
   }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const redirectSpy = vi.fn();
+vi.mock("next/navigation", () => ({ redirect: (url: string) => redirectSpy(url) }));
 
-const { getCurrentUser, setDevUser, DEV_USER_COOKIE } = await import("./auth");
+const { getCurrentUser, setDevUser, clearDevUser, hasChosenDemoUser, DEV_USER_COOKIE } =
+  await import("./auth");
 const { USERS } = await import("./users");
 
 const AGENT = USERS.find((u) => u.role === "agent")!;
@@ -27,6 +31,7 @@ function setNodeEnv(value: string) {
 beforeEach(() => {
   cookieJar.clear();
   setCookie.mockClear();
+  redirectSpy.mockClear();
 });
 
 afterEach(() => {
@@ -93,4 +98,47 @@ test("setDevUser refuses an id that is not one of ours", async () => {
   await setDevUser(form);
 
   expect(setCookie).not.toHaveBeenCalled();
+});
+
+// ---- the demo front door (spec 0005). Cosmetic routing only: these do not
+// change getCurrentUser, whose behaviour the seven tests above still pin. ----
+
+test("with no cookie, no demo user has been chosen", async () => {
+  expect(await hasChosenDemoUser()).toBe(false);
+});
+
+test("a cookie naming a known user counts as chosen", async () => {
+  cookieJar.set(DEV_USER_COOKIE, AGENT.id);
+  expect(await hasChosenDemoUser()).toBe(true);
+});
+
+// A stale or hand-edited cookie must not leave someone silently acting as the
+// default admin — it sends them back to the front door instead.
+test("a cookie naming an unknown user does not count as chosen", async () => {
+  cookieJar.set(DEV_USER_COOKIE, "u_not_a_real_user");
+  expect(await hasChosenDemoUser()).toBe(false);
+});
+
+test("in production there is no front door to gate on", async () => {
+  setNodeEnv("production");
+  expect(await hasChosenDemoUser()).toBe(true);
+});
+
+test("clearDevUser removes the cookie and returns to /signin", async () => {
+  cookieJar.set(DEV_USER_COOKIE, AGENT.id);
+
+  await clearDevUser();
+
+  expect(cookieJar.has(DEV_USER_COOKIE)).toBe(false);
+  expect(redirectSpy).toHaveBeenCalledWith("/signin");
+});
+
+test("in production, clearDevUser is inert like setDevUser", async () => {
+  setNodeEnv("production");
+  cookieJar.set(DEV_USER_COOKIE, AGENT.id);
+
+  await clearDevUser();
+
+  expect(cookieJar.has(DEV_USER_COOKIE)).toBe(true);
+  expect(redirectSpy).not.toHaveBeenCalled();
 });

@@ -2,12 +2,11 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { listLeads } from "@/lib/leads";
 import { buildFunnel } from "@/lib/funnel";
-import DevUserSwitcher from "./dev-user-switcher";
 import LeadRow from "./lead-row";
 import Funnel from "./funnel";
 import AddLeadForm from "./add-lead-form";
 
-const CELL = "px-4 py-3 align-top";
+const CELL = "px-4 py-3.5 align-top";
 
 export default async function LeadsPage({
   searchParams,
@@ -24,8 +23,8 @@ export default async function LeadsPage({
   const funnel = buildFunnel(leads);
 
   return (
-    <div className="min-h-full w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="w-full text-zinc-900 dark:text-zinc-100">
+      <div className="mx-auto max-w-7xl px-6 py-6">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Leads</h1>
@@ -47,7 +46,6 @@ export default async function LeadsPage({
             >
               {includeArchived ? "Hide archived" : "Show archived"}
             </Link>
-            <DevUserSwitcher />
           </div>
         </header>
 
@@ -70,13 +68,11 @@ export default async function LeadsPage({
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <table className="w-full min-w-4xl border-collapse text-sm">
+            <table className="w-full min-w-3xl border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                  <th className={CELL}>Name</th>
-                  <th className={CELL}>Contact</th>
-                  <th className={CELL}>Location</th>
-                  <th className={CELL}>Treatment interest</th>
+                <tr className="border-b border-zinc-200 bg-zinc-50/80 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
+                  <th className={CELL}>Patient</th>
+                  <th className={CELL}>Enquiry</th>
                   <th className={CELL}>Stage</th>
                   <th className={CELL}>Status</th>
                   <th className={CELL}>Owner</th>

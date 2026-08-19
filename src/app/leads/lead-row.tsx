@@ -46,14 +46,23 @@ export default function LeadRow({
         lead.status === "Archived" ? "opacity-60" : ""
       }`}
     >
-      <td className={`${CELL} font-medium`}>{lead.name}</td>
-      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-        {lead.email && <div>{lead.email}</div>}
-        {lead.phone && <div>{lead.phone}</div>}
+      {/* Patient: who they are and how to reach them. */}
+      <td className={CELL}>
+        <div className="font-medium">{lead.name}</div>
+        {lead.email && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">{lead.email}</div>
+        )}
+        {lead.phone && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">{lead.phone}</div>
+        )}
       </td>
-      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>{lead.location ?? "—"}</td>
-      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>
-        {lead.treatmentInterest ?? "—"}
+
+      {/* Enquiry: what they asked for and where they are coming from. */}
+      <td className={CELL}>
+        <div>{lead.treatmentInterest ?? "—"}</div>
+        {lead.location && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">{lead.location}</div>
+        )}
       </td>
 
       <td className={CELL}>
@@ -130,14 +139,23 @@ export default function LeadRow({
 
       <td className={CELL}>
         {lead.notes.length > 0 && (
-          <ul className="mb-1.5 space-y-1">
-            {lead.notes.map((note) => (
-              <li key={note.id} className="text-xs text-zinc-600 dark:text-zinc-400">
-                {note.body}
-                <span className="text-zinc-400 dark:text-zinc-500"> — {note.authorName}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-1.5">
+            <p
+              title={lead.notes.at(-1)!.body}
+              className="max-w-[15rem] truncate text-xs text-zinc-600 dark:text-zinc-400"
+            >
+              {lead.notes.at(-1)!.body}
+              <span className="text-zinc-400 dark:text-zinc-500">
+                {" "}
+                — {lead.notes.at(-1)!.authorName}
+              </span>
+            </p>
+            {lead.notes.length > 1 && (
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                +{lead.notes.length - 1} earlier
+              </p>
+            )}
+          </div>
         )}
         <form action={noteSubmit} className="flex items-start gap-1">
           <input type="hidden" name="leadId" value={lead.id} />
