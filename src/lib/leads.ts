@@ -47,6 +47,8 @@ export type LeadListItem = {
   location: string | null;
   treatmentInterest: string | null;
   stage: Stage;
+  /** Where a Lost lead had got to, so the funnel can still credit it. */
+  lostFromStage: Stage | null;
   status: Status;
   ownerId: string | null;
   ownerName: string | null;
@@ -75,6 +77,7 @@ function toListItem(lead: LeadDoc & { _id: mongoose.Types.ObjectId }): LeadListI
     location: lead.location ?? null,
     treatmentInterest: lead.treatmentInterest ?? null,
     stage: lead.stage as Stage,
+    lostFromStage: (lead.lostFromStage as Stage | null) ?? null,
     status: lead.status as Status,
     ownerId: lead.ownerId ?? null,
     ownerName: ownerNameFor(lead.ownerId ?? null),
@@ -121,9 +124,19 @@ export async function setStage(leadId: string, stage: Stage): Promise<ActionResu
 
   if (!STAGES.includes(stage)) return { ok: false, error: "Unknown stage." };
 
+  // Remember the stage a lead is lost from, and forget it if the lead comes
+  // back onto the pipeline. Without this the funnel cannot tell where people
+  // fall out, and losing a lead silently flatters the conversion of the stage
+  // it was lost from.
+  const lostFromStage =
+    stage === "Lost" ? (lead.stage === "Lost" ? lead.lostFromStage : lead.stage) : null;
+
   // Scope stays in the write filter too: the read above could go stale, and a
   // future edit that drops the pre-check must not silently open a hole.
-  await Lead.updateOne({ _id: lead._id, ...scopeFor(user) }, { $set: { stage } });
+  await Lead.updateOne(
+    { _id: lead._id, ...scopeFor(user) },
+    { $set: { stage, lostFromStage } },
+  );
   revalidatePath("/leads");
   return { ok: true };
 }

@@ -15,12 +15,18 @@ export default async function LeadsPage({
 }) {
   const includeArchived = (await searchParams).archived === "1";
   const user = await getCurrentUser();
-  const leads = await listLeads({ includeArchived });
+  // One query for both. The funnel deliberately ignores the archived toggle:
+  // archiving means "treatment finished, filed away", so excluding those leads
+  // would erase the practice's wins. The table still respects the toggle.
+  const leadsInScope = await listLeads({ includeArchived: true });
+  const leads = includeArchived
+    ? leadsInScope
+    : leadsInScope.filter((lead) => lead.status === "Active");
   // TODO: the funnel counts the rows this page fetched. Correct only while the
   // page fetches every lead in scope — if pagination or a row limit is ever
   // added, this must become its own aggregation query carrying scopeFor(user),
   // or the funnel will silently describe one page instead of the pipeline.
-  const funnel = buildFunnel(leads);
+  const funnel = buildFunnel(leadsInScope);
 
   return (
     <div className="w-full text-zinc-900 dark:text-zinc-100">

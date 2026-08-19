@@ -13,7 +13,12 @@ export default function Funnel({ data }: { data: FunnelData }) {
       className="mb-6 grid gap-6 rounded-lg border border-zinc-200 bg-white p-5 md:grid-cols-[1fr_auto] dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div>
-        <h2 className="mb-4 text-sm font-semibold tracking-tight">Pipeline</h2>
+        <h2 className="text-sm font-semibold tracking-tight">Pipeline</h2>
+        {/* Said out loud, because the table above can be filtered and this is
+            not — a funnel that changed with a view filter would not be one. */}
+        <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-500">
+          Every lead, archived included. A lead counts at each stage it reached.
+        </p>
 
         {widest === 0 ? (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -40,14 +45,16 @@ export default function Funnel({ data }: { data: FunnelData }) {
                   </span>
                 </div>
 
-                {step.dropToNext !== null && (
+                {step.noFurther !== null && (
                   <div className="flex items-center gap-3 py-0.5">
                     <span className="w-40 shrink-0" />
+                    {/* "no further" rather than "dropped": most of these are
+                        live prospects sitting at this step, not losses. */}
                     <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                      {step.dropToNext === 0 ? "no drop" : `−${step.dropToNext}`}
-                      {step.conversionToNext !== null && (
-                        <> · {percent(step.conversionToNext)} continue</>
-                      )}
+                      {step.conversionToNext === null
+                        ? "—"
+                        : `${percent(step.conversionToNext)} moved on`}
+                      {step.noFurther > 0 && <> · {step.noFurther} no further</>}
                     </span>
                   </div>
                 )}

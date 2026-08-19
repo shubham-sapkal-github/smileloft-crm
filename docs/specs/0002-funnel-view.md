@@ -35,6 +35,13 @@ Both of these are the same root cause, written down here because they are
 invisible in the finished screen and someone will otherwise rediscover them by
 disbelieving the numbers.
 
+> **Superseded in part, 2026-08-19.** Two decisions below were reversed after
+> the numbers were checked against real data: the funnel no longer drops Lost
+> leads from the bars, and no longer follows the archived toggle. Both were
+> making it report the practice as doing better than it was. `lostFromStage`
+> now records where a lead was lost from. See the corrections at the end of
+> this section and `docs/DECISIONS.md`.
+
 ### The funnel infers a history the data does not record
 
 A lead record stores only its **current** stage. There is no record of the
@@ -61,9 +68,24 @@ dropped out is gone, so a Lost lead cannot be attributed to any bar. This is why
 Lost is a single number rather than a per-stage breakdown, and why "we lose most
 people after the consult" is a question this screen **cannot** answer.
 
-**Upgrade path:** the same stage-change log. With it, the stage a lead occupied
-immediately before Lost is recorded, and the number beside the funnel can become
-a per-stage breakdown.
+**Partly fixed, 2026-08-19.** `lostFromStage` on the lead records the stage it
+was on when it was set to Lost, so the funnel now credits a lost lead with every
+stage it genuinely reached. It is cleared if the lead is put back on the
+pipeline. Leads lost *before* this field existed have no value and fall back to
+counting at `New` only.
+
+**Still open:** this is one field, not a history. It records only the most
+recent loss, and nothing about the path taken before it. A full stage-change log
+remains the upgrade path, and is what a per-stage breakdown of losses would
+need.
+
+### Corrections to the original decisions
+
+| Originally | Now | Why |
+|---|---|---|
+| Lost leads excluded from every bar | Counted for every stage they reached; still never a bar of their own | Removing them shrank the denominator without touching the numerator, so **losing a patient improved the conversion shown for the stage they were lost from** — measured going 60% → 75% on real data. |
+| Funnel follows the **Show archived** toggle | Funnel always counts every lead in scope; only the table follows the toggle | Archived means "treatment finished, filed away". Excluding those leads erased the practice's own wins: with both won patients archived the funnel read **Won 0**. A funnel that changes with a view filter is not a funnel. The page says so under the heading. |
+| Between-bar figure labelled `−N · X% continue` | `X% moved on · N no further` | `N` is the count of leads whose furthest stage is that one — mostly live prospects sitting there, not losses. The minus sign read as attrition. |
 
 ## In scope
 

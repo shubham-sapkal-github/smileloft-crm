@@ -111,9 +111,9 @@ test("the funnel an agent sees is built only from their own leads", async () => 
   expect(agentFunnel.total).toBe(2);
   expect(agentFunnel.lost).toBe(0);
 
-  // Every bar the agent sees is smaller: the admin's extra Won lead is absent.
+  // The admin's top bar counts all four, the Lost one included — it enquired.
   expect(agentFunnel.steps[0].reached).toBe(2);
-  expect(adminFunnel.steps[0].reached).toBe(3);
+  expect(adminFunnel.steps[0].reached).toBe(4);
   expect(agentFunnel.steps.at(-1)!.reached).toBe(1);
   expect(adminFunnel.steps.at(-1)!.reached).toBe(2);
 });
@@ -381,4 +381,20 @@ test("a status outside Active/Archived is refused and nothing is stored", async 
     error: "Unknown status.",
   });
   expect((await stored(lead._id)).status).toBe("Active");
+});
+
+test("moving a lead to Lost records the stage it was lost from", async () => {
+  const lead = await seed({ ownerId: AGENT.id, stage: "Consult Booked" });
+  actingUser = AGENT;
+
+  await setStage(String(lead._id), "Lost");
+  expect((await stored(lead._id)).lostFromStage).toBe("Consult Booked");
+
+  // Losing it twice must not overwrite where it was originally lost from.
+  await setStage(String(lead._id), "Lost");
+  expect((await stored(lead._id)).lostFromStage).toBe("Consult Booked");
+
+  // Putting it back on the pipeline clears it.
+  await setStage(String(lead._id), "Contacted");
+  expect((await stored(lead._id)).lostFromStage).toBeNull();
 });

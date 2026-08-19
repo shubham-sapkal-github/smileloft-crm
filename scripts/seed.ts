@@ -13,6 +13,7 @@ type SeedLead = {
   location: string;
   treatmentInterest: string;
   stage: Stage;
+  lostFromStage?: Stage;
   status: Status;
   ownerId: string | null;
   notes?: { body: string; authorId: string; authorName: string }[];
@@ -83,14 +84,14 @@ const LEADS: SeedLead[] = [
   {
     name: "Chloe Fraser", email: "chloe.fraser@example.com",
     location: "Wigan", treatmentInterest: "Teeth whitening",
-    stage: "Lost", status: "Active", ownerId: AGENT,
+    stage: "Lost", lostFromStage: "Treatment Planned", status: "Active", ownerId: AGENT,
     notes: [{ body: "Went with a cheaper quote elsewhere.", authorId: AGENT, authorName: "Tom Reid" }],
   },
   {
     // Cold and filed away.
     name: "Peter Nkemelu", phone: "07700 900112",
     location: "Manchester", treatmentInterest: "Hygiene",
-    stage: "Lost", status: "Archived", ownerId: AGENT,
+    stage: "Lost", lostFromStage: "Contacted", status: "Archived", ownerId: AGENT,
   },
 ];
 

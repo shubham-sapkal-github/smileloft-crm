@@ -1,6 +1,6 @@
 import "server-only";
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
-import { STAGES, STATUSES } from "./lead-enums";
+import { FUNNEL_STAGES, STAGES, STATUSES } from "./lead-enums";
 
 // Long enough for any real name, town or treatment description; short enough
 // that the field is not a place to paste an essay. Enforced here so the rule
@@ -29,6 +29,10 @@ const leadSchema = new Schema(
       maxlength: [FIELD_MAX, "Treatment interest is too long."],
     },
     stage: { type: String, enum: [...STAGES], default: "New", required: true },
+    // Setting a lead to Lost overwrites where it had got to, which made the
+    // funnel unable to credit the stages it genuinely reached. Captured on the
+    // way out so that history survives; null for anything not Lost.
+    lostFromStage: { type: String, enum: [...FUNNEL_STAGES], default: null },
     status: { type: String, enum: [...STATUSES], default: "Active", required: true },
     // TODO: plain string while users are hardcoded in src/lib/auth.ts. Becomes
     // { type: Schema.Types.ObjectId, ref: "User" } when real auth lands.
