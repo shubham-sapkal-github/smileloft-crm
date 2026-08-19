@@ -4,7 +4,7 @@ import { listLeads } from "@/lib/leads";
 import { buildFunnel } from "@/lib/funnel";
 import LeadRow from "./lead-row";
 import Funnel from "./funnel";
-import AddLeadForm from "./add-lead-form";
+import AddLeadDialog from "./add-lead-dialog";
 
 const CELL = "px-4 py-3.5 align-top";
 
@@ -46,12 +46,11 @@ export default async function LeadsPage({
             >
               {includeArchived ? "Hide archived" : "Show archived"}
             </Link>
+            <AddLeadDialog />
           </div>
         </header>
 
         <Funnel data={funnel} />
-
-        <AddLeadForm />
 
         {leads.length === 0 ? (
           <div className="rounded-lg border border-zinc-200 bg-white px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">
