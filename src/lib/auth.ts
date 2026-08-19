@@ -2,19 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { USERS, DEFAULT_USER, type User } from "./users";
 
-export type Role = "admin" | "agent";
-export type User = { id: string; name: string; role: Role };
+export type { Role, User } from "./users";
 
-// TODO: hardcoded until real auth exists. This list and getCurrentUser() are
-// the only things that change when it arrives — nothing else in the codebase
-// reads identity from anywhere else.
-export const USERS: readonly User[] = [
-  { id: "u_admin", name: "Priya Shah", role: "admin" },
-  { id: "u_agent", name: "Tom Reid", role: "agent" },
-];
-
-export const DEFAULT_USER: User = USERS[0];
 export const DEV_USER_COOKIE = "dev-user";
 
 /**

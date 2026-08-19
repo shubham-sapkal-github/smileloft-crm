@@ -15,7 +15,8 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { getCurrentUser, setDevUser, USERS, DEV_USER_COOKIE } = await import("./auth");
+const { getCurrentUser, setDevUser, DEV_USER_COOKIE } = await import("./auth");
+const { USERS } = await import("./users");
 
 const AGENT = USERS.find((u) => u.role === "agent")!;
 const ADMIN = USERS.find((u) => u.role === "admin")!;

@@ -76,12 +76,13 @@ mount the dev switcher) and `docs/STACK.md` (to fill in the `db seed` row).
 | `src/lib/db.ts` | `connectToDatabase()`. Caches the mongoose connection promise on `globalThis` so hot reload reuses one connection. Reads `MONGODB_URI`, throws at startup if unset. |
 | `src/models/lead-enums.ts` | `STAGES`, `STATUSES` and their types. **No `server-only`** — see below. |
 | `src/models/Lead.ts` | Mongoose schema + model, guarded against re-registration on hot reload. `server-only`. |
-| `src/lib/auth.ts` | `getCurrentUser()`, the hardcoded `USERS` list, and `setDevUser()`. |
+| `src/lib/users.ts` | The hardcoded `USERS` list and the `User`/`Role` types. **No `server-only`**, for the same reason as the enums: the seed script (plain Node) and the switcher dropdown (a Client Component) both need it. |
+| `src/lib/auth.ts` | `getCurrentUser()` and `setDevUser()`. `server-only`. |
 | `src/lib/leads.ts` | Data access layer: `listLeads()`, `setStage()`, `assignOwner()`, `addNote()`. Marked `import 'server-only'`. |
 | `src/app/leads/page.tsx` | Server Component. Awaits `listLeads()`, renders the table. |
 | `src/app/leads/lead-row.tsx` | Client Component for the three row controls. |
 | `src/app/dev-user-switcher.tsx` | Dev-only role switcher, rendered from the root layout. |
-| `scripts/seed.ts` | Seeds leads across both roles, several stages, both statuses. |
+| `scripts/seed.ts` | Seeds 12 leads across **all six stages**, both statuses and both owners, plus one unowned. Idempotent: matched on `name` and updated in place, so re-running during a demo resets rather than duplicates. Run with `npm run seed`. |
 | `src/lib/leads.test.ts` | The runnable check (see Test cases). |
 | `vitest.config.mts` | Test plumbing: loads `.env.local` (Vitest does not, Next does) and aliases `server-only` to its own `empty.js`, which is what the `react-server` condition resolves to. Without the alias every test importing a server-only module fails on import. |
 
@@ -297,6 +298,7 @@ Any of them can be reopened cheaply.
 | 2026-08-19 | Plan written | Claude |
 | 2026-08-19 | Agent reassignment restricted to admins; location confirmed as patient town; no create form; questions 2, 3, 5, 6 decided by default | Claude |
 | 2026-08-19 | **Plan approved** | shubham |
+| 2026-08-19 | Subtask 5 built: idempotent seed across all six stages; `USERS` split into `src/lib/users.ts`; added `tsx` to run scripts | Claude |
 | 2026-08-19 | Subtask 4 built: `scopeFor`, `listLeads`, three mutations, permission-before-payload ordering. Verified by deleting each rule | Claude |
 | 2026-08-19 | Added the "at least one of email or phone" rule (subtask 2) | Claude |
 | 2026-08-19 | Subtask 3 built: `getCurrentUser()`, `setDevUser()`, production guards, mutation-verified | Claude |

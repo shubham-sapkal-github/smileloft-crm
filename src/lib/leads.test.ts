@@ -6,7 +6,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined, set: () => {} }),
 }));
 
-const { USERS } = await import("./auth");
+const { USERS } = await import("./users");
 const ADMIN = USERS.find((u) => u.role === "admin")!;
 const AGENT = USERS.find((u) => u.role === "agent")!;
 const OTHER_AGENT_ID = "u_someone_else";

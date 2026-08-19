@@ -2,7 +2,8 @@ import "server-only";
 import mongoose, { type QueryFilter } from "mongoose";
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "./db";
-import { getCurrentUser, USERS, type User } from "./auth";
+import { getCurrentUser } from "./auth";
+import { USERS, type User } from "./users";
 import { Lead, type LeadDoc } from "@/models/Lead";
 import { STAGES, type Stage, type Status } from "@/models/lead-enums";
 
