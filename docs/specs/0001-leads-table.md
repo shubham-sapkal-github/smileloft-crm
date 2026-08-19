@@ -74,7 +74,8 @@ mount the dev switcher) and `docs/STACK.md` (to fill in the `db seed` row).
 | File | Responsibility |
 |---|---|
 | `src/lib/db.ts` | `connectToDatabase()`. Caches the mongoose connection promise on `globalThis` so hot reload reuses one connection. Reads `MONGODB_URI`, throws at startup if unset. |
-| `src/models/Lead.ts` | Mongoose schema + model, guarded against re-registration on hot reload. |
+| `src/models/lead-enums.ts` | `STAGES`, `STATUSES` and their types. **No `server-only`** — see below. |
+| `src/models/Lead.ts` | Mongoose schema + model, guarded against re-registration on hot reload. `server-only`. |
 | `src/lib/auth.ts` | `getCurrentUser()`, the hardcoded `USERS` list, and `setDevUser()`. |
 | `src/lib/leads.ts` | Data access layer: `listLeads()`, `setStage()`, `assignOwner()`, `addNote()`. Marked `import 'server-only'`. |
 | `src/app/leads/page.tsx` | Server Component. Awaits `listLeads()`, renders the table. |
@@ -82,6 +83,7 @@ mount the dev switcher) and `docs/STACK.md` (to fill in the `db seed` row).
 | `src/app/dev-user-switcher.tsx` | Dev-only role switcher, rendered from the root layout. |
 | `scripts/seed.ts` | Seeds leads across both roles, several stages, both statuses. |
 | `src/lib/leads.test.ts` | The runnable check (see Test cases). |
+| `vitest.config.mts` | Test plumbing: loads `.env.local` (Vitest does not, Next does) and aliases `server-only` to its own `empty.js`, which is what the `react-server` condition resolves to. Without the alias every test importing a server-only module fails on import. |
 
 ### The permission model
 
@@ -136,6 +138,16 @@ not the control.
 
 ### Data model
 
+Only `name` is required. Location and treatment interest are optional, and so
+are email and phone **individually**: a lead often arrives with a phone number
+and nothing else, and refusing to store that loses the lead.
+
+But a lead must carry **at least one of email or phone**. Someone with a name
+and no way to be contacted can never be followed up, so they are not a lead.
+Enforced by a `pre("validate")` hook on the schema, which covers every write
+path in this spec — the three row actions touch stage, owner and notes, never
+the contact fields.
+
 `Lead`: `name`, `email`, `phone`, `location`, `treatmentInterest` (all strings —
 `location` is the patient's home town, e.g. "Manchester", plain data with no
 bearing on permissions);
@@ -146,9 +158,17 @@ default `Active`); `ownerId` (string, indexed, matches a `USERS` id);
 `ownerId` is a plain string today because users are hardcoded. When real auth
 lands it becomes an `ObjectId` ref — carried as a `TODO:` in the model.
 
-Stage and status enums are declared **once** in `src/models/Lead.ts` and
+Stage and status enums are declared **once**, in `src/models/lead-enums.ts`, and
 imported everywhere else, so the dropdown options and the server-side validation
 cannot drift apart.
+
+They live in their own module rather than in `src/models/Lead.ts` because the
+model imports `server-only`, and the row controls are a Client Component that
+needs the same lists for its dropdowns. Importing the model from the client
+fails the build — verified by deliberately doing it — so the constants, which
+are plain strings and safe on either side, are the shared piece and the model is
+not. `src/models/Lead.ts` does not re-export them: one import path, so nobody
+reaches the enums through the server-only module by habit.
 
 ### Flow
 
@@ -169,6 +189,7 @@ cannot drift apart.
 | Agent calls `assignOwner()` on a lead they own | Refused — admin-only. No write. Generic error. The control is not rendered for agents either, but the server is what enforces it. |
 | Admin reassigns a lead from one agent to another | Allowed. The lead leaves the old owner's list and appears in the new owner's. |
 | Empty or whitespace-only note | Rejected, nothing written. |
+| Lead written with a name but no email and no phone | Rejected by the model. |
 | Note submitted but the write fails | The action returns an error and the typed text stays in the box. A failed note must not silently vanish. |
 | Two people change the stage of one lead at once | Last write wins. Acceptable at practice scale; no locking. |
 | Lead has no owner | Visible to admins only, since no agent owns it. Seed includes one. |
@@ -196,7 +217,7 @@ missing record.
 | # | Task | Estimate |
 |---|---|---|
 | 1 | `src/lib/db.ts` — connection cached on `globalThis` | 30 min |
-| 2 | `src/models/Lead.ts` — schema, enums, indexes | 45 min |
+| 2 | `src/models/lead-enums.ts` + `src/models/Lead.ts` — schema, enums, indexes | 45 min |
 | 3 | `src/lib/auth.ts` — `getCurrentUser()`, `USERS`, `setDevUser()`, production guard | 45 min |
 | 4 | `src/lib/leads.ts` — `scopeFor()`, list + three mutations, validation | 1.5 h |
 | 5 | `scripts/seed.ts` + fill in the `db seed` row in `docs/STACK.md` | 45 min |
@@ -223,6 +244,13 @@ Mongo container and are the ones that actually prove the permission model.
 | 6b | A lead owned by agent A | Admin calls `assignOwner()` | Write succeeds; owner changes |
 | 7 | Any lead | `addNote()` with `"   "` | Rejected; notes array unchanged |
 | 8 | `NODE_ENV=production` and a `dev-user` cookie naming the agent | `getCurrentUser()` | Returns the default admin; cookie ignored |
+| 9 | `NODE_ENV=production` | `setDevUser()` with a **valid** user id | No cookie written. The id must be valid or the id check, not the production guard, is what stops the write — and the test would pass with the guard deleted |
+| 10 | A lead with a name and no contact details | `Lead.create()` | Rejected — "at least one of email or phone" |
+| 11 | A lead with a name and only a phone | `Lead.create()` | Accepted |
+
+Cases 4, 6a, 8 and 9 are the ones that matter. Each is verified by deleting the
+rule it covers and confirming the test goes red — a test for a security guard
+that has never been seen to fail is not evidence the guard works.
 
 Cases 4 and 6a are the ones that matter. If it ever goes green while the write succeeds,
 the permission model is broken regardless of what the UI shows.
@@ -249,3 +277,6 @@ Any of them can be reopened cheaply.
 | 2026-08-19 | Plan written | Claude |
 | 2026-08-19 | Agent reassignment restricted to admins; location confirmed as patient town; no create form; questions 2, 3, 5, 6 decided by default | Claude |
 | 2026-08-19 | **Plan approved** | shubham |
+| 2026-08-19 | Added the "at least one of email or phone" rule (subtask 2) | Claude |
+| 2026-08-19 | Subtask 3 built: `getCurrentUser()`, `setDevUser()`, production guards, mutation-verified | Claude |
+| 2026-08-19 | Subtasks 1–2 built. Added `vitest.config.mts` to the file list; split the enums out of the server-only model into `src/models/lead-enums.ts` | Claude |
