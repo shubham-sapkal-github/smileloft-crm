@@ -86,6 +86,7 @@ mount the dev switcher) and `docs/STACK.md` (to fill in the `db seed` row).
 | `src/app/leads/dev-user-switcher.tsx` | Dev-only role switcher. A **Server** Component with a plain form — no client JS needed, and `setDevUser` is passed straight to `action`. Lives in the leads header rather than the root layout, so the acting user sits next to the lead count that proves the scope is real, and it stays off unrelated pages. |
 | `scripts/seed.ts` | Seeds 12 leads across **all six stages**, both statuses and both owners, plus one unowned. Idempotent: matched on `name` and updated in place, so re-running during a demo resets rather than duplicates. Run with `npm run seed`. |
 | `src/lib/leads.test.ts` | The runnable check (see Test cases). |
+| `scripts/prove-permissions.ts` | `npm run prove:permissions` — sends `assignOwner` straight at the running server as an agent, bypassing the page, and asserts it is refused *and* the stored record is untouched. Includes an admin control case: if the admin's identical request does not succeed, the request is malformed and the whole proof is void, so it reports FAIL rather than a false PASS. |
 | `vitest.config.mts` | Test plumbing: loads `.env.local` (Vitest does not, Next does) and aliases `server-only` to its own `empty.js`, which is what the `react-server` condition resolves to. Without the alias every test importing a server-only module fails on import. |
 
 ### The permission model
@@ -300,6 +301,7 @@ Any of them can be reopened cheaply.
 | 2026-08-19 | Plan written | Claude |
 | 2026-08-19 | Agent reassignment restricted to admins; location confirmed as patient town; no create form; questions 2, 3, 5, 6 decided by default | Claude |
 | 2026-08-19 | **Plan approved** | shubham |
+| 2026-08-19 | Permission proof moved out of scratch into `scripts/prove-permissions.ts` | Claude |
 | 2026-08-19 | Subtask 7 built: row actions, admin-only assign control, `/` redirects to `/leads`. Bypass verified by replaying a captured browser request as an agent | Claude |
 | 2026-08-19 | Subtask 6 built, plus subtask 8 pulled forward (the switcher is needed to see both roles). Rung 4 closed in a real browser | Claude |
 | 2026-08-19 | Subtask 5 built: idempotent seed across all six stages; `USERS` split into `src/lib/users.ts`; added `tsx` to run scripts | Claude |

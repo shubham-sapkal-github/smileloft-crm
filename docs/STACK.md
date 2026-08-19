@@ -38,6 +38,7 @@ Run `/stack <what they told you to use>` to fill this in.
 | lint / typecheck | `npm run lint` / `npm run typecheck` |
 | db migrate | |
 | db seed | `npm run seed` |
+| prove permissions | `npm run prove:permissions` (needs `npm run dev` running) |
 | deploy | |
 
 Leave a row blank if it doesn't exist for this stack. Blank means "skip it",
