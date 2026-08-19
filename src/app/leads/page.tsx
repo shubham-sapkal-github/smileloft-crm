@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { listLeads } from "@/lib/leads";
+import { buildFunnel } from "@/lib/funnel";
 import DevUserSwitcher from "./dev-user-switcher";
 import LeadRow from "./lead-row";
+import Funnel from "./funnel";
 
 const CELL = "px-4 py-3 align-top";
 
@@ -14,6 +16,11 @@ export default async function LeadsPage({
   const includeArchived = (await searchParams).archived === "1";
   const user = await getCurrentUser();
   const leads = await listLeads({ includeArchived });
+  // TODO: the funnel counts the rows this page fetched. Correct only while the
+  // page fetches every lead in scope — if pagination or a row limit is ever
+  // added, this must become its own aggregation query carrying scopeFor(user),
+  // or the funnel will silently describe one page instead of the pipeline.
+  const funnel = buildFunnel(leads);
 
   return (
     <div className="min-h-full w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -42,6 +49,8 @@ export default async function LeadsPage({
             <DevUserSwitcher />
           </div>
         </header>
+
+        <Funnel data={funnel} />
 
         {leads.length === 0 ? (
           <div className="rounded-lg border border-zinc-200 bg-white px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">

@@ -21,6 +21,7 @@ vi.mock("./auth", async (importOriginal) => {
 const { connectToDatabase } = await import("./db");
 const { Lead } = await import("@/models/Lead");
 const { listLeads, setStage, assignOwner, addNote, scopeFor } = await import("./leads");
+const { buildFunnel } = await import("./funnel");
 
 /** Reads the raw stored record — never trust what the action claims. */
 async function stored(id: mongoose.Types.ObjectId) {
@@ -85,6 +86,35 @@ test("archived leads are hidden by default and shown on request", async () => {
   expect((await listLeads({ includeArchived: true })).map((l) => l.name)).toContain(
     "LeadsCheck Archived",
   );
+});
+
+test("the funnel an agent sees is built only from their own leads", async () => {
+  await seed({ name: "LeadsCheck Mine", ownerId: AGENT.id, stage: "Won" });
+  await seed({ name: "LeadsCheck AlsoMine", ownerId: AGENT.id, stage: "New" });
+  await seed({ name: "LeadsCheck Theirs", stage: "Won" });
+  await seed({ name: "LeadsCheck TheirsLost", stage: "Lost" });
+
+  // The database also holds seeded demo data, so narrow to this test's own
+  // fixtures. What is being proven is which of them survive listLeads.
+  const mine = (list: Awaited<ReturnType<typeof listLeads>>) =>
+    list.filter((lead) => lead.name.startsWith("LeadsCheck"));
+
+  actingUser = ADMIN;
+  const adminFunnel = buildFunnel(mine(await listLeads()));
+  actingUser = AGENT;
+  const agentFunnel = buildFunnel(mine(await listLeads()));
+
+  // 4 leads for the admin (3 on the path, 1 lost); 2 for the agent, none lost.
+  expect(adminFunnel.total).toBe(4);
+  expect(adminFunnel.lost).toBe(1);
+  expect(agentFunnel.total).toBe(2);
+  expect(agentFunnel.lost).toBe(0);
+
+  // Every bar the agent sees is smaller: the admin's extra Won lead is absent.
+  expect(agentFunnel.steps[0].reached).toBe(2);
+  expect(adminFunnel.steps[0].reached).toBe(3);
+  expect(agentFunnel.steps.at(-1)!.reached).toBe(1);
+  expect(adminFunnel.steps.at(-1)!.reached).toBe(2);
 });
 
 // ---- the block, proven against the stored record ----

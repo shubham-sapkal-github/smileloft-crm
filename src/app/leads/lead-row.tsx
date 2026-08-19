@@ -5,6 +5,7 @@ import { USERS } from "@/lib/users";
 import { STAGES } from "@/models/lead-enums";
 import type { LeadListItem } from "@/lib/leads";
 import { addNoteAction, assignOwnerAction, setStageAction } from "./actions";
+import { STAGE_STYLES } from "./stage-styles";
 
 const CELL = "px-4 py-3 align-top";
 const CONTROL =
@@ -12,16 +13,7 @@ const CONTROL =
 const BUTTON =
   "rounded bg-zinc-900 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white";
 
-const STAGE_STYLES: Record<string, string> = {
-  New: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  Contacted: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  "Consult Booked": "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
-  "Treatment Planned": "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
-  Won: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  Lost: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300",
-};
-
-function Error({ state }: { state: { ok: boolean; error?: string } | null }) {
+function ActionError({ state }: { state: { ok: boolean; error?: string } | null }) {
   if (!state || state.ok) return null;
   return <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{state.error}</p>;
 }
@@ -77,7 +69,7 @@ export default function LeadRow({
             {stagePending ? "…" : "Move"}
           </button>
         </form>
-        <Error state={stageState} />
+        <ActionError state={stageState} />
       </td>
 
       <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>{lead.status}</td>
@@ -109,7 +101,7 @@ export default function LeadRow({
                 {ownerPending ? "…" : "Assign"}
               </button>
             </form>
-            <Error state={ownerState} />
+            <ActionError state={ownerState} />
           </>
         )}
       </td>
@@ -138,7 +130,7 @@ export default function LeadRow({
             {notePending ? "…" : "Add"}
           </button>
         </form>
-        <Error state={noteState} />
+        <ActionError state={noteState} />
       </td>
     </tr>
   );
