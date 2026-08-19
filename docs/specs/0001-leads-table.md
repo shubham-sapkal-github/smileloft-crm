@@ -106,6 +106,24 @@ is refused even for a lead they own. The two rules are deliberately distinct —
 scope is about ownership, this one is about authority — and both live in
 `src/lib/leads.ts`.
 
+**Order matters inside every mutation.** The caller is identified, then
+authorised, and only then is the payload looked at:
+
+1. `getCurrentUser()`
+2. authority check (`assignOwner` only: `role === 'admin'`)
+3. locate the lead **within the caller's scope** — refuse if it isn't there
+4. validate the payload
+5. write, with the scope in the write filter as well
+
+Steps 2–3 run before step 4 so a caller who may not touch a lead is refused
+identically whether the payload they sent is valid, invalid or empty. Putting
+validation first would let an agent tell a real lead id from a fake one by the
+error message that came back.
+
+The scope is in the write filter *as well as* the pre-check deliberately: the
+read can go stale, and an edit that later drops the pre-check must not silently
+open a hole.
+
 Server Functions are reachable by direct POST, not only through our UI (Next.js
 data-security guide), so every one of the three actions calls `getCurrentUser()`
 and re-derives the scope itself. Nothing trusts an id, a role or an owner sent
@@ -190,6 +208,8 @@ reaches the enums through the server-only module by habit.
 | Admin reassigns a lead from one agent to another | Allowed. The lead leaves the old owner's list and appears in the new owner's. |
 | Empty or whitespace-only note | Rejected, nothing written. |
 | Lead written with a name but no email and no phone | Rejected by the model. |
+| Malformed lead id (not an ObjectId) | Same generic "Lead not found" — no cast error leaks out. |
+| Note longer than 2000 characters | Rejected. A cap has to exist somewhere; 2000 is roughly a screen of text. |
 | Note submitted but the write fails | The action returns an error and the typed text stays in the box. A failed note must not silently vanish. |
 | Two people change the stage of one lead at once | Last write wins. Acceptable at practice scale; no locking. |
 | Lead has no owner | Visible to admins only, since no agent owns it. Seed includes one. |
@@ -277,6 +297,7 @@ Any of them can be reopened cheaply.
 | 2026-08-19 | Plan written | Claude |
 | 2026-08-19 | Agent reassignment restricted to admins; location confirmed as patient town; no create form; questions 2, 3, 5, 6 decided by default | Claude |
 | 2026-08-19 | **Plan approved** | shubham |
+| 2026-08-19 | Subtask 4 built: `scopeFor`, `listLeads`, three mutations, permission-before-payload ordering. Verified by deleting each rule | Claude |
 | 2026-08-19 | Added the "at least one of email or phone" rule (subtask 2) | Claude |
 | 2026-08-19 | Subtask 3 built: `getCurrentUser()`, `setDevUser()`, production guards, mutation-verified | Claude |
 | 2026-08-19 | Subtasks 1–2 built. Added `vitest.config.mts` to the file list; split the enums out of the server-only model into `src/models/lead-enums.ts` | Claude |

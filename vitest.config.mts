@@ -15,6 +15,8 @@ export default defineConfig({
   // it at the same empty module the react-server condition would have given.
   resolve: {
     alias: {
+      // Mirrors the `@/*` path alias in tsconfig.json.
+      "@": fileURLToPath(new URL("src", import.meta.url)),
       "server-only": fileURLToPath(
         new URL("node_modules/server-only/empty.js", import.meta.url),
       ),
