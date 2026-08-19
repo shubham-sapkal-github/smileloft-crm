@@ -23,7 +23,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      {/* The app is a fixed shell: the document itself never scrolls, only
+            the content area inside it does. Pages that are not the shell
+            (e.g. /signin) carry their own scroll. */}
+      <body className="h-full overflow-hidden">{children}</body>
     </html>
   );
 }

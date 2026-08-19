@@ -67,16 +67,17 @@ export default async function LeadsPage({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="overflow-x-auto overflow-y-clip rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <table className="w-full min-w-3xl border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50/80 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
+                <tr className="sticky top-0 z-10 border-b border-zinc-200 bg-zinc-50 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-400">
                   <th className={CELL}>Patient</th>
                   <th className={CELL}>Enquiry</th>
                   <th className={CELL}>Stage</th>
                   <th className={CELL}>Status</th>
                   <th className={CELL}>Owner</th>
                   <th className={CELL}>Notes</th>
+                  <th className={CELL}>Actions</th>
                 </tr>
               </thead>
               <tbody>

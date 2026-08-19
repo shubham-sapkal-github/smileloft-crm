@@ -8,7 +8,7 @@ export default function SignInPage() {
   const enabled = isDevSwitcherEnabled();
 
   return (
-    <div className="flex min-h-full w-full items-center justify-center bg-zinc-100 px-6 py-16 dark:bg-zinc-950">
+    <div className="flex h-full w-full items-center justify-center overflow-y-auto bg-zinc-100 px-6 py-16 dark:bg-zinc-950">
       <div className="w-full max-w-md">
         <h1 className="text-center text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
           SmileLoft Dental

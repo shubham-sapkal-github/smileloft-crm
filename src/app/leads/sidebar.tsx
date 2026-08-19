@@ -23,17 +23,17 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <nav
       aria-label="Sections"
-      className={`shrink-0 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 ${
+      className={`h-full shrink-0 overflow-y-auto border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 ${
         collapsed ? "w-14" : "w-56"
       }`}
     >
-      <div className="sticky top-0 flex h-full flex-col gap-1 p-2">
-        <form action={toggleSidebar} className="mb-2">
+      <div className="flex h-full flex-col gap-1 p-2">
+        <form action={toggleSidebar} className="mb-2 flex justify-end">
           <button
             type="submit"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex w-full items-center justify-center rounded-md px-2 py-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden>
               <path d={collapsed ? "M7 4l6 6-6 6V4z" : "M13 4L7 10l6 6V4z"} />
