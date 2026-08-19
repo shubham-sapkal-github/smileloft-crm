@@ -26,40 +26,47 @@ export default function Funnel({ data }: { data: FunnelData }) {
           </p>
         ) : (
           <ol className="space-y-1">
-            {data.steps.map((step) => (
-              <li key={step.stage}>
-                <div className="flex items-center gap-3">
-                  <span className="w-40 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">
-                    {step.stage}
-                  </span>
-                  <div className="h-6 min-w-0 flex-1 rounded bg-zinc-100 dark:bg-zinc-800">
-                    <div
-                      className={`h-6 rounded ${STAGE_BAR[step.stage]}`}
-                      // Scaled to the first bar, so the shape is comparable
-                      // between an admin's funnel and an agent's.
-                      style={{ width: `${(step.reached / widest) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-8 shrink-0 text-right text-sm font-medium tabular-nums">
-                    {step.reached}
-                  </span>
-                </div>
-
-                {step.noFurther !== null && (
-                  <div className="flex items-center gap-3 py-0.5">
-                    <span className="w-40 shrink-0" />
-                    {/* "no further" rather than "dropped": most of these are
-                        live prospects sitting at this step, not losses. */}
-                    <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                      {step.conversionToNext === null
-                        ? "—"
-                        : `${percent(step.conversionToNext)} moved on`}
-                      {step.noFurther > 0 && <> · {step.noFurther} no further</>}
+            {data.steps.map((step, index) => {
+              const next = data.steps[index + 1]?.stage;
+              return (
+                <li key={step.stage}>
+                  <div className="flex items-center gap-3">
+                    <span className="w-40 shrink-0 text-xs text-zinc-600 dark:text-zinc-400">
+                      {step.stage}
+                    </span>
+                    <div className="h-6 min-w-0 flex-1 rounded bg-zinc-100 dark:bg-zinc-800">
+                      <div
+                        className={`h-6 rounded ${STAGE_BAR[step.stage]}`}
+                        // Scaled to the first bar, so the shape is comparable
+                        // between an admin's funnel and an agent's.
+                        style={{ width: `${(step.reached / widest) * 100}%` }}
+                      />
+                    </div>
+                    <span className="w-8 shrink-0 text-right text-sm font-medium tabular-nums">
+                      {step.reached}
                     </span>
                   </div>
-                )}
-              </li>
-            ))}
+
+                  {step.noFurther !== null && next && (
+                    <div className="flex items-center gap-3 py-0.5">
+                      <span className="w-40 shrink-0" />
+                      {/* Names both stages — a bare "89% moved on" between two
+                          rows doesn't say which row it belongs to. "no
+                          further" rather than "dropped": most of these are
+                          live prospects sitting at this step, not losses. */}
+                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                        {step.conversionToNext === null
+                          ? "—"
+                          : `${percent(step.conversionToNext)} of ${step.stage} moved on to ${next}`}
+                        {step.noFurther > 0 && (
+                          <> · {step.noFurther} still on {step.stage}</>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
       </div>
