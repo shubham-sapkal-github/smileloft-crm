@@ -20,7 +20,8 @@ vi.mock("./auth", async (importOriginal) => {
 
 const { connectToDatabase } = await import("./db");
 const { Lead } = await import("@/models/Lead");
-const { listLeads, setStage, assignOwner, addNote, scopeFor } = await import("./leads");
+const { listLeads, setStage, setStatus, assignOwner, addNote, createLead, scopeFor } =
+  await import("./leads");
 const { buildFunnel } = await import("./funnel");
 
 /** Reads the raw stored record — never trust what the action claims. */
@@ -242,4 +243,142 @@ test("a malformed lead id is refused like a missing one", async () => {
     ok: false,
     error: "Lead not found.",
   });
+});
+
+// ---- creating a lead ----
+
+const NEW_LEAD = {
+  name: "LeadsCheck Created",
+  email: "created@example.com",
+  phone: "07700 900200",
+  location: "Manchester",
+  treatmentInterest: "Invisalign",
+};
+
+const storedByName = async (name: string) => Lead.findOne({ name }).lean();
+
+test("an agent's new lead is owned by that agent, at New and Active", async () => {
+  actingUser = AGENT;
+
+  const result = await createLead(NEW_LEAD);
+
+  expect(result.ok).toBe(true);
+  const lead = await storedByName(NEW_LEAD.name);
+  expect(lead!.ownerId).toBe(AGENT.id);
+  expect(lead!.stage).toBe("New");
+  expect(lead!.status).toBe("Active");
+});
+
+test("an admin's new lead starts unassigned", async () => {
+  actingUser = ADMIN;
+
+  await createLead(NEW_LEAD);
+
+  expect((await storedByName(NEW_LEAD.name))!.ownerId).toBeNull();
+});
+
+// The one that matters: if this passes while the stored document carries a
+// client-supplied owner, the rest of the permission model is decoration.
+test("mass assignment: ownerId, stage and status in the input are ignored", async () => {
+  actingUser = AGENT;
+
+  await createLead({
+    ...NEW_LEAD,
+    ownerId: ADMIN.id,
+    stage: "Won",
+    status: "Archived",
+    _id: "6a857d0729aff31e703cd999",
+  } as never);
+
+  const lead = await storedByName(NEW_LEAD.name);
+  expect(lead!.ownerId).toBe(AGENT.id);
+  expect(lead!.stage).toBe("New");
+  expect(lead!.status).toBe("Active");
+});
+
+test("a lead with no name is refused, keyed to name, and nothing is stored", async () => {
+  const result = await createLead({ ...NEW_LEAD, name: "" });
+
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error("expected failure");
+  expect(result.errors.name).toMatch(/name/i);
+  expect(await Lead.countDocuments({ email: NEW_LEAD.email })).toBe(0);
+});
+
+test("a lead with no email and no phone is refused, keyed to phone", async () => {
+  const result = await createLead({ ...NEW_LEAD, email: "", phone: "" });
+
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error("expected failure");
+  expect(result.errors.phone).toMatch(/at least one of email or phone/);
+  expect(await storedByName(NEW_LEAD.name)).toBeNull();
+});
+
+test("a failed create hands back what was submitted so the form can refill", async () => {
+  const submitted = { ...NEW_LEAD, name: "", location: "Stockport" };
+
+  const result = await createLead(submitted);
+
+  if (result.ok) throw new Error("expected failure");
+  expect(result.values).toEqual(submitted);
+  expect(result.values.location).toBe("Stockport");
+  expect(result.values.treatmentInterest).toBe(NEW_LEAD.treatmentInterest);
+});
+
+test("a field over the length cap is refused, keyed to that field", async () => {
+  const result = await createLead({ ...NEW_LEAD, location: "x".repeat(201) });
+
+  if (result.ok) throw new Error("expected failure");
+  expect(result.errors.location).toMatch(/too long/i);
+  expect(await storedByName(NEW_LEAD.name)).toBeNull();
+});
+
+test("stored values are trimmed", async () => {
+  await createLead({ ...NEW_LEAD, name: "  LeadsCheck Created  ", location: "  Bolton  " });
+
+  const lead = await storedByName("LeadsCheck Created");
+  expect(lead!.location).toBe("Bolton");
+});
+
+test("an admin's unassigned lead is invisible to agents", async () => {
+  actingUser = ADMIN;
+  await createLead(NEW_LEAD);
+
+  actingUser = AGENT;
+  expect((await listLeads()).map((l) => l.name)).not.toContain(NEW_LEAD.name);
+});
+
+// ---- archiving ----
+
+test("an agent can archive and unarchive their own lead", async () => {
+  const lead = await seed({ ownerId: AGENT.id, status: "Active" });
+  actingUser = AGENT;
+
+  expect(await setStatus(String(lead._id), "Archived")).toEqual({ ok: true });
+  expect((await stored(lead._id)).status).toBe("Archived");
+  expect((await listLeads()).map((l) => l.name)).not.toContain(lead.name);
+
+  expect(await setStatus(String(lead._id), "Active")).toEqual({ ok: true });
+  expect((await stored(lead._id)).status).toBe("Active");
+});
+
+test("an agent cannot archive a lead they do not own", async () => {
+  const lead = await seed({ status: "Active" });
+  actingUser = AGENT;
+
+  expect(await setStatus(String(lead._id), "Archived")).toEqual({
+    ok: false,
+    error: "Lead not found.",
+  });
+  expect((await stored(lead._id)).status).toBe("Active");
+});
+
+test("a status outside Active/Archived is refused and nothing is stored", async () => {
+  const lead = await seed({ status: "Active" });
+
+  expect(await setStatus(String(lead._id), "Binned" as never)).toEqual({
+    ok: false,
+    error: "Unknown status.",
+  });
+  expect((await stored(lead._id)).status).toBe("Active");
 });

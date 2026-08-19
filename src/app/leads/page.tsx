@@ -5,6 +5,7 @@ import { buildFunnel } from "@/lib/funnel";
 import DevUserSwitcher from "./dev-user-switcher";
 import LeadRow from "./lead-row";
 import Funnel from "./funnel";
+import AddLeadForm from "./add-lead-form";
 
 const CELL = "px-4 py-3 align-top";
 
@@ -51,6 +52,8 @@ export default async function LeadsPage({
         </header>
 
         <Funnel data={funnel} />
+
+        <AddLeadForm />
 
         {leads.length === 0 ? (
           <div className="rounded-lg border border-zinc-200 bg-white px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">

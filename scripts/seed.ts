@@ -94,7 +94,25 @@ const LEADS: SeedLead[] = [
   },
 ];
 
+/**
+ * This script deletes leads. Wiping a demo database by accident is fine;
+ * wiping a hosted one is not, and the difference between them is one
+ * environment variable. Refuse anything that is not clearly local.
+ */
+function assertLocalDatabase() {
+  const uri = process.env.MONGODB_URI ?? "";
+  const host = uri.replace(/^mongodb(\+srv)?:\/\//, "").split("/")[0];
+  const isLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
+  if (!isLocal) {
+    throw new Error(
+      `Refusing to seed: MONGODB_URI points at "${host}", which is not a local database. ` +
+        `This script deletes leads it did not create.`,
+    );
+  }
+}
+
 async function seed() {
+  assertLocalDatabase();
   await connectToDatabase();
 
   // Safe to run twice: match on the name and update in place, so a re-run
@@ -111,6 +129,19 @@ async function seed() {
       },
     })),
   );
+
+  // Anything this script did not create is removed, so a re-run returns the
+  // database to a known state before a demo rather than leaving hand-added
+  // leads lying around.
+  const names = LEADS.map((lead) => lead.name);
+  const strays = await Lead.find({ name: { $nin: names } }, { name: 1 }).lean();
+  if (strays.length > 0) {
+    await Lead.deleteMany({ name: { $nin: names } });
+    console.log(
+      `removed ${strays.length} lead(s) not created by this script: ` +
+        strays.map((s) => s.name).join(", "),
+    );
+  }
 
   const byStage = await Lead.aggregate<{ _id: string; count: number }>([
     { $group: { _id: "$stage", count: { $sum: 1 } } },

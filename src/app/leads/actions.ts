@@ -1,6 +1,14 @@
 "use server";
-import { addNote, assignOwner, setStage, type ActionResult } from "@/lib/leads";
-import type { Stage } from "@/models/lead-enums";
+import {
+  addNote,
+  assignOwner,
+  createLead,
+  setStage,
+  setStatus,
+  type ActionResult,
+  type CreateResult,
+} from "@/lib/leads";
+import type { Stage, Status } from "@/models/lead-enums";
 
 export type NoteResult = ActionResult & { body?: string };
 
@@ -31,4 +39,27 @@ export async function addNoteAction(
   const body = String(formData.get("body") ?? "");
   const result = await addNote(String(formData.get("leadId")), body);
   return result.ok ? result : { ...result, body };
+}
+
+export async function setStatusAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return setStatus(String(formData.get("leadId")), String(formData.get("status")) as Status);
+}
+
+// The five fields are read out **by name**. Nothing else in the form is looked
+// at, so a posted ownerId/stage/status cannot reach the document.
+export async function createLeadAction(
+  _prev: CreateResult | null,
+  formData: FormData,
+): Promise<CreateResult> {
+  const field = (name: string) => String(formData.get(name) ?? "");
+  return createLead({
+    name: field("name"),
+    email: field("email"),
+    phone: field("phone"),
+    location: field("location"),
+    treatmentInterest: field("treatmentInterest"),
+  });
 }

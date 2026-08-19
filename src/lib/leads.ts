@@ -5,13 +5,32 @@ import { connectToDatabase } from "./db";
 import { getCurrentUser } from "./auth";
 import { USERS, type User } from "./users";
 import { Lead, type LeadDoc } from "@/models/Lead";
-import { STAGES, type Stage, type Status } from "@/models/lead-enums";
+import { STAGES, STATUSES, type Stage, type Status } from "@/models/lead-enums";
 
 // A refusal and a missing record are indistinguishable on purpose: the table
 // must not be usable to discover which lead ids exist.
 const DENIED = { ok: false, error: "Lead not found." } as const;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** The only fields a caller may supply. Everything else is set by the server. */
+export type NewLeadInput = {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  treatmentInterest: string;
+};
+
+export type CreateResult =
+  | { ok: true; id: string; name: string }
+  | {
+      ok: false;
+      errors: Partial<Record<keyof NewLeadInput, string>>;
+      // Handed back so the form can be refilled: React clears an uncontrolled
+      // form once the action resolves, and five retyped fields is a real loss.
+      values: NewLeadInput;
+    };
 
 export type LeadNote = {
   id: string;
@@ -155,6 +174,74 @@ export async function addNote(leadId: string, body: string): Promise<ActionResul
       },
     },
   );
+  revalidatePath("/leads");
+  return { ok: true };
+}
+
+/**
+ * Creating a lead has no existing owner to check against, so the guarantee is
+ * a different one: **owner, stage and status come from the server's view of the
+ * caller and are never read from the input.** An agent passing
+ * `ownerId: "u_admin"` still gets a lead owned by themselves.
+ *
+ * The five fields are read out by name — an allow-list. A deny-list of fields
+ * to strip would only ever be as complete as the last person to update it, and
+ * adding a sensitive field to the schema would silently open a hole.
+ *
+ * Every user may create; reception, agents and admins all record enquiries.
+ */
+export async function createLead(input: NewLeadInput): Promise<CreateResult> {
+  await connectToDatabase();
+  const user = await getCurrentUser();
+
+  const values: NewLeadInput = {
+    name: input.name ?? "",
+    email: input.email ?? "",
+    phone: input.phone ?? "",
+    location: input.location ?? "",
+    treatmentInterest: input.treatmentInterest ?? "",
+  };
+
+  try {
+    const lead = await Lead.create({
+      ...values,
+      // Server-derived, never from the caller. An admin records an enquiry for
+      // somebody else to pick up, so theirs starts unassigned.
+      ownerId: user.role === "admin" ? null : user.id,
+      stage: "New",
+      status: "Active",
+    });
+    revalidatePath("/leads");
+    return { ok: true, id: String(lead._id), name: lead.name };
+  } catch (error) {
+    // The rule lives once, in the schema. Translate it rather than restating
+    // it here, or the copy in this function is the one that goes stale.
+    if (error instanceof mongoose.Error.ValidationError) {
+      const errors: Partial<Record<keyof NewLeadInput, string>> = {};
+      for (const [path, detail] of Object.entries(error.errors)) {
+        if (path in values) errors[path as keyof NewLeadInput] = detail.message;
+      }
+      return { ok: false, errors, values };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Archive and unarchive. Deliberately the same shape and the same rule as
+ * setStage — a fourth row action inventing its own permission concept would be
+ * a fourth thing to get wrong.
+ */
+export async function setStatus(leadId: string, status: Status): Promise<ActionResult> {
+  await connectToDatabase();
+  const user = await getCurrentUser();
+
+  const lead = await findInScope(leadId, user);
+  if (!lead) return DENIED;
+
+  if (!STATUSES.includes(status)) return { ok: false, error: "Unknown status." };
+
+  await Lead.updateOne({ _id: lead._id, ...scopeFor(user) }, { $set: { status } });
   revalidatePath("/leads");
   return { ok: true };
 }

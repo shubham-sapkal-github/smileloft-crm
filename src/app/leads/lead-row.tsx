@@ -4,7 +4,12 @@ import { useActionState } from "react";
 import { USERS } from "@/lib/users";
 import { STAGES } from "@/models/lead-enums";
 import type { LeadListItem } from "@/lib/leads";
-import { addNoteAction, assignOwnerAction, setStageAction } from "./actions";
+import {
+  addNoteAction,
+  assignOwnerAction,
+  setStageAction,
+  setStatusAction,
+} from "./actions";
 import { STAGE_STYLES } from "./stage-styles";
 
 const CELL = "px-4 py-3 align-top";
@@ -28,6 +33,7 @@ export default function LeadRow({
   const [stageState, stageSubmit, stagePending] = useActionState(setStageAction, null);
   const [ownerState, ownerSubmit, ownerPending] = useActionState(assignOwnerAction, null);
   const [noteState, noteSubmit, notePending] = useActionState(addNoteAction, null);
+  const [statusState, statusSubmit, statusPending] = useActionState(setStatusAction, null);
 
   // React clears the form once the action resolves, so a failed note is put
   // back from what the action returned. Remounting on change is what makes the
@@ -72,7 +78,23 @@ export default function LeadRow({
         <ActionError state={stageState} />
       </td>
 
-      <td className={`${CELL} text-zinc-600 dark:text-zinc-400`}>{lead.status}</td>
+      <td className={CELL}>
+        <div className="mb-1.5 text-zinc-600 dark:text-zinc-400">{lead.status}</div>
+        {/* Archiving is the undo this app has: nothing is deleted, it is filed
+            away. Same permission rule as every other row action. */}
+        <form action={statusSubmit}>
+          <input type="hidden" name="leadId" value={lead.id} />
+          <input
+            type="hidden"
+            name="status"
+            value={lead.status === "Active" ? "Archived" : "Active"}
+          />
+          <button type="submit" className={BUTTON} disabled={statusPending}>
+            {statusPending ? "…" : lead.status === "Active" ? "Archive" : "Unarchive"}
+          </button>
+        </form>
+        <ActionError state={statusState} />
+      </td>
 
       <td className={CELL}>
         <div className="mb-1.5 text-zinc-600 dark:text-zinc-400">
